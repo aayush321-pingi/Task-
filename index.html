@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Static Data Table Manager (HTML / CSS / JS)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="analytics.css">
+</head>
+<body>
+    <div class="container">
+      <div class="card">
+        <header>
+          <div class="topbar">
+            <h1>Static Data Table Manager</h1>
+            <div class="badge">(Static preview - open in browser)</div>
+          </div>
+          <div class="controls">
+            <input id="search" class="search" placeholder="Search across all fields..." />
+            <label style="display:flex;align-items:center;gap:8px">
+              <input id="themeToggle" type="checkbox" /> Dark
+            </label>
+            <div class="actions">
+              <button id="manageBtn" class="btn secondary">Manage Columns</button>
+              <label style="display:flex;align-items:center">
+                <input id="csvFile" type="file" accept=".csv,text/csv" style="display:none" />
+                <button id="importBtn" class="btn secondary">Import CSV</button>
+              </label>
+              <button id="exportBtn" class="btn">Export CSV</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="table-wrap" style="margin-top:12px">
+          <table class="table" aria-label="data-table">
+            <thead id="thead" class="thead"></thead>
+            <tbody id="tbody" class="tbody"></tbody>
+          </table>
+        </div>
+
+        <div class="paginator">
+          <button id="prevPage" class="btn secondary">Prev</button>
+          <div id="pageInfo" class="small">Page 1 / 1</div>
+          <button id="nextPage" class="btn secondary">Next</button>
+          <div style="margin-left:auto" class="small">Rows: <span id="rowsCount">0</span></div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button id="saveAll" class="btn">Save All</button>
+          <button id="cancelAll" class="btn secondary">Cancel All</button>
+        </div>
+
+        <!-- Analytics Dashboard -->
+        <div class="analytics-dashboard">
+          <!-- Role Distribution -->
+          <div class="chart-card">
+            <h3>Role Distribution</h3>
+            <div class="chart-area">
+              <div id="chartWrapper" style="height:180px;position:relative">
+                <div id="chartPreloader" class="chart-preloader"><div class="spinner"></div></div>
+                <canvas id="chart" style="width:100%;height:100%"></canvas>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Age Distribution -->
+          <div class="chart-card">
+            <h3>Age Distribution</h3>
+            <div class="chart-area">
+              <div id="pieWrapper" style="height:180px;position:relative">
+                <div id="piePreloader" class="chart-preloader"><div class="spinner"></div></div>
+                <canvas id="pieChart" style="width:100%;height:100%"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="stats-card">
+            <div class="stat-item">
+              <div class="stat-label">Total Employees</div>
+              <div id="totalCount" class="stat-value">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Average Age</div>
+              <div id="avgAge" class="stat-value">0</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Roles</div>
+              <div id="uniqueRoles" class="stat-value">0</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- modal -->
+    <div id="modal" class="modal">
+      <div class="modal-backdrop">
+        <div class="modal card">
+          <h3>Manage Columns</h3>
+          <div style="margin-top:8px" class="form-row">
+            <input id="newKey" placeholder="key (e.g. phone)" class="input" />
+            <input id="newLabel" placeholder="Label (e.g. Phone)" class="input" />
+            <button id="addCol" class="btn">Add</button>
+          </div>
+          <div id="colList" class="col-list" style="margin-top:12px"></div>
+          <div style="margin-top:12px;text-align:right">
+            <button id="closeModal" class="btn secondary">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Libraries from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2/dist/fuse.basic.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- App logic -->
+    <script src="app.js"></script>
+  </body>
+</html>
+        const roleCounts = {};
+        const ages = [];
+        rows.forEach(r=>{ const role = r.role || 'Unknown'; roleCounts[role] = (roleCounts[role]||0)+1; if(!isNaN(Number(r.age))) ages.push(Number(r.age)); });
+        const labels = Object.keys(roleCounts);
+        const data = Object.values(roleCounts);
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: { labels: labels, datasets: [{ label: 'Role counts', data: data, backgroundColor: 'rgba(25,118,210,0.85)' }] },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true}} }
+        });
+      }catch(e){/* Chart may not be available */}
+    }
+
+    function filteredRows(){
+      const q = (state.search||'').trim();
+      if(!q) return state.rows.slice();
+      try{
+        if(window.Fuse && fuse){
+          const res = fuse.search(q);
+          return res.map(r=>r.item);
+        }
+      }catch(e){/* fall back */}
+      const low = q.toLowerCase();
+      return state.rows.filter(r => state.columns.some(c=> String(r[c.key]||'').toLowerCase().includes(low)) );
+    }
+
+    function sortedRows(){
+      const arr = filteredRows();
+      if(!state.sort.key) return arr;
+      const k = state.sort.key; const dir = state.sort.dir === 'asc' ? 1 : -1;
+      arr.sort((a,b)=>{ const va=a[k] ?? ''; const vb=b[k] ?? ''; return String(va).localeCompare(String(vb), undefined, {numeric:true}) * dir });
+      return arr;
+    }
+
+    function pagedRows(){
+      const s = sortedRows(); const start = state.page * state.pageSize; return s.slice(start, start + state.pageSize);
+    }
+
+    function updateEditButtons(){ const has = Object.keys(state.edits||{}).length>0; saveAllBtn.disabled=!has; cancelAllBtn.disabled=!has }
+
+    // --- render ---
+    function render(){
+      // rebuild fuse index & chart for advanced UX
+      resetFuse();
+      renderHeader(); renderBody(); updatePageInfo(); rowsCount.textContent = `${filteredRows().length} row(s)`; updateEditButtons();
+      renderChart();
+    }
+
+    function renderHeader(){
+      const visible = state.columns.filter(c=>c.visible);
+      const tr = document.createElement('tr');
+      visible.forEach(c=>{
+        const th = document.createElement('th'); th.textContent = c.label;
+        th.style.cursor='pointer';
+        const span = document.createElement('span'); span.className='sort';
+        if(state.sort.key===c.key){ span.textContent = state.sort.dir==='asc' ? '▲' : '▼' } else { span.textContent = '' }
+        th.appendChild(span);
+        th.addEventListener('click', ()=>{
+          if(state.sort.key===c.key){ state.sort.dir = state.sort.dir==='asc' ? 'desc' : 'asc' } else { state.sort.key = c.key; state.sort.dir='asc' }
+          render();
+        });
+        tr.appendChild(th);
+      });
+      const act = document.createElement('th'); act.textContent='Actions'; tr.appendChild(act);
+      thead.innerHTML=''; thead.appendChild(tr);
+    }
+
+    function renderBody(){
+      const visible = state.columns.filter(c=>c.visible);
+      const rows = pagedRows();
+      // efficient clear
+      tbody.innerHTML = '';
+      const frag = document.createDocumentFragment();
+        rows.forEach(row => {
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-id', row.id);
+          tr.classList.add('row-enter');
+          tr.addEventListener('dblclick', ()=> startRowEditing(row.id));
+        visible.forEach(col=>{
+          const td = document.createElement('td');
+          if(state.edits[row.id] && (col.key in state.edits[row.id])){
+            const v = state.edits[row.id][col.key];
+            const inp = document.createElement('input'); inp.className='inline-input'; inp.value = v; inp.addEventListener('input', e=> applyEdit(row.id,col.key,e.target.value));
+            td.appendChild(inp);
+          } else if(state.edits[row.id]){
+            const value = (state.edits[row.id][col.key] !== undefined) ? state.edits[row.id][col.key] : (row[col.key] ?? '');
+            td.textContent = String(value);
+          } else {
+            td.textContent = String(row[col.key] ?? '');
+          }
+          tr.appendChild(td);
+        });
+        // actions
+        const atd = document.createElement('td');
+  const del = document.createElement('button'); del.className='ghost'; del.textContent='Delete'; del.addEventListener('click', ()=>{ if(confirm('Delete this row?')){ animateDeleteRow(row.id) } });
+        atd.appendChild(del);
+        tr.appendChild(atd);
+        frag.appendChild(tr);
+        // trigger enter animation
+        requestAnimationFrame(()=>{ setTimeout(()=> tr.classList.remove('row-enter'), 18) });
+      });
+      tbody.appendChild(frag);
+    }
+
+    function startRowEditing(id){
+      // copy current row into edits
+      if(!state.edits[id]){
+        const row = state.rows.find(r=>r.id===id); if(!row) return; state.edits[id] = Object.assign({}, row);
+      }
+      render(); updateEditButtons();
+    }
+
+    function applyEdit(id, key, value){
+      if(!state.edits[id]) state.edits[id] = {};
+      // simple validation for age
+      if(key==='age' && value!==''){
+        const num = Number(value);
+        if(Number.isNaN(num)){ /* keep string but you might show validation */ }
+      }
+      state.edits[id][key] = value;
+      updateEditButtons();
+    }
+
+    function renderModal(){
+      colList.innerHTML='';
+      state.columns.forEach((c, idx)=>{
+        const div = document.createElement('div'); div.className='col-item';
+        div.setAttribute('data-key', c.key);
+        const left = document.createElement('div');
+        const chk = document.createElement('input'); chk.type='checkbox'; chk.checked = !!c.visible; chk.addEventListener('change', ()=>{ c.visible = chk.checked; saveColumns(); render(); });
+        left.appendChild(chk);
+        const label = document.createElement('span'); label.textContent = ' ' + c.label + ' ('+c.key+')'; left.appendChild(label);
+        div.appendChild(left);
+        const right = document.createElement('div');
+        const up = document.createElement('button'); up.textContent='▲'; up.className='ghost'; up.disabled = idx===0; up.addEventListener('click', ()=>{ if(idx>0){ state.columns.splice(idx-1,0,state.columns.splice(idx,1)[0]); saveColumns(); renderModal(); render(); }});
+        const down = document.createElement('button'); down.textContent='▼'; down.className='ghost'; down.disabled = idx===state.columns.length-1; down.addEventListener('click', ()=>{ if(idx<state.columns.length-1){ state.columns.splice(idx+1,0,state.columns.splice(idx,1)[0]); saveColumns(); renderModal(); render(); }});
+        const del = document.createElement('button'); del.textContent='Delete'; del.className='ghost'; del.addEventListener('click', ()=>{ if(confirm('Remove column '+c.label+'? This will NOT delete the data in rows.')){ state.columns.splice(idx,1); saveColumns(); renderModal(); render(); }});
+        right.appendChild(up); right.appendChild(down); right.appendChild(del);
+        div.appendChild(right);
+        colList.appendChild(div);
+      });
+      // attach Sortable behavior
+      enableSortable();
+    }
+
+    // animate deletion of a row for smooth UX
+    function animateDeleteRow(id){
+      const tr = tbody.querySelector(`[data-id="${id}"]`);
+      if(tr){
+        tr.classList.add('row-exit');
+        setTimeout(()=>{
+          state.rows = state.rows.filter(r=>r.id!==id);
+          delete state.edits[id];
+          render();
+        }, 320);
+      } else {
+        // fallback
+        state.rows = state.rows.filter(r=>r.id!==id);
+        delete state.edits[id];
+        render();
+      }
+    }
+
+    function updatePageInfo(){
+      const total = filteredRows().length; const pages = Math.max(1, Math.ceil(total/state.pageSize)); pageInfo.textContent = `Page ${state.page+1} / ${pages}`;
+    }
+
+    // initial setup
+    resetFuse(); render();
+
+    // expose for debugging in browser console
+    window.__staticTableState = state;
+  })();
+  </script>
+</body>
+</html>

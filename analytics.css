@@ -1,0 +1,100 @@
+/* Analytics Dashboard */
+.analytics-dashboard {
+  margin-top: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  animation: fadeInUp 0.8s ease;
+}
+
+.chart-card, .stats-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chart-card:hover, .stats-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.chart-card h3, .stats-card h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  color: var(--text);
+  opacity: 0.9;
+}
+
+.chart-area {
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
+  border-radius: 10px;
+  padding: 12px;
+  transition: background-color 0.3s ease;
+}
+
+.stats-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 12px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.05), transparent);
+  transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+}
+
+.stat-label {
+  font-size: 14px;
+  color: var(--text);
+  opacity: 0.7;
+  margin-bottom: 8px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: bold;
+  color: var(--accent);
+  animation: countUp 1.5s ease-out;
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Dark mode adjustments */
+.dark .chart-area {
+  background: linear-gradient(180deg, rgba(255,255,255,0.03), transparent);
+}
+
+.dark .stat-item {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+}
